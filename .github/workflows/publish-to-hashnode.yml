@@ -32,11 +32,11 @@ jobs:
         id: changed-files
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            # On manual trigger, process all .md files except README.md
-            find . -maxdepth 1 -name "*.md" ! -name "README.md" -type f | sed 's|^\./||' > changed_files.txt
+            # On manual trigger, process all .md files except README.md and SETUP.md
+            find . -maxdepth 1 -name "*.md" ! -name "README.md" ! -name "SETUP.md" -type f | sed 's|^\./||' > changed_files.txt
           else
             # On push, detect changed files
-            git diff --name-only --diff-filter=ACMR ${{ github.event.before }} ${{ github.sha }} | grep '\.md$' | grep -v '^README\.md$' > changed_files.txt || true
+            git diff --name-only --diff-filter=ACMR ${{ github.event.before }} ${{ github.sha }} | grep '\.md$' | grep -v '^README\.md$' | grep -v '^SETUP\.md$' > changed_files.txt || true
           fi
           
           if [ -s changed_files.txt ]; then

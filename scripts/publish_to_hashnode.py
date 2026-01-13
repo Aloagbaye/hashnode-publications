@@ -272,9 +272,13 @@ def process_markdown_file(file_path: Path) -> bool:
     """
     print(f"\n📄 Processing: {file_path}")
     
-    # Skip README.md
+    # Skip README.md and SETUP.md
     if file_path.name == "README.md":
         print("   ⏭️  Skipping README.md")
+        return False
+    
+    if file_path.name == "SETUP.md":
+        print("   ⏭️  Skipping SETUP.md")
         return False
     
     # Read file
@@ -320,8 +324,8 @@ def main():
         with open(changed_files_path, "r") as f:
             file_list = [line.strip() for line in f if line.strip()]
     else:
-        # Fallback: process all .md files in root (except README.md)
-        file_list = [str(f) for f in Path(".").glob("*.md") if f.name != "README.md"]
+        # Fallback: process all .md files in root (except README.md and SETUP.md)
+        file_list = [str(f) for f in Path(".").glob("*.md") if f.name not in ["README.md", "SETUP.md"]]
     
     if not file_list:
         print("No markdown files to process")
