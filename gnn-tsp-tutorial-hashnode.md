@@ -26,7 +26,6 @@ In this comprehensive tutorial, you'll learn how to apply **Graph Neural Network
 9. [Conclusion and Next Steps](#conclusion-and-next-steps)
 
 ---
-
 ## What is the Traveling Salesman Problem?
 
 The **Traveling Salesman Problem (TSP)** is a classic optimization problem that asks:

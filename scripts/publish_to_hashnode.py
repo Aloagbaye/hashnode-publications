@@ -248,7 +248,6 @@ def publish_post(frontmatter: Dict, content: str, domain: str) -> bool:
           title
           publishedAt
         }
-        success
       }
     }
     """
@@ -320,8 +319,9 @@ def publish_post(frontmatter: Dict, content: str, domain: str) -> bool:
             
             if "data" in data and data["data"] and data["data"].get("publishPost"):
                 publish_result = data["data"]["publishPost"]
-                if publish_result.get("success"):
-                    post = publish_result.get("post", {})
+                post = publish_result.get("post")
+                
+                if post:
                     print(f"✅ Successfully published: {post.get('title', title)}")
                     if post.get("url"):
                         print(f"   URL: {post['url']}")
@@ -329,7 +329,8 @@ def publish_post(frontmatter: Dict, content: str, domain: str) -> bool:
                         print(f"   Slug: {post['slug']}")
                     return True
                 else:
-                    print(f"❌ Publishing failed (success: false)")
+                    print(f"❌ Publishing failed: No post returned in response")
+                    print(f"   Response: {json.dumps(publish_result, indent=2)}")
                     return False
         else:
             print(f"Error: HTTP {response.status_code}")
