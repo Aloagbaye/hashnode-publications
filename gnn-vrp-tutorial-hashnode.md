@@ -3,8 +3,8 @@ title: "Solving the Vehicle Routing Problem with Graph Neural Networks: A Comple
 subtitle: "Build a GNN to optimize delivery routes for multiple vehicles using PyTorch Geometric"
 slug: solving-vehicle-routing-problem-with-graph-neural-networks
 cover_image: https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1600
-tags: machine-learning, python, deep-learning, graph-neural-networks, logistics, optimization, pytorch, artificial-intelligence
-canonical_url: 
+tags: machine-learning, python, deep-learning, graph-neural-networks, logistics
+domain: israelcodes.hashnode.dev
 ---
 
 # Solving the Vehicle Routing Problem with Graph Neural Networks: A Complete Guide

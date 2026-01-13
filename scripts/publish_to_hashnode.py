@@ -188,28 +188,56 @@ def get_publication_id(domain: str) -> Optional[str]:
     return None
 
 
-def get_existing_post_id(publication_id: str, slug: str) -> Optional[str]:
+def get_existing_post_id(slug: str, domain: str) -> Optional[str]:
     """
     Check if a post with the given slug already exists.
+    Returns the post ID if found, None otherwise.
     """
+    # Extract host from domain
+    host = domain.replace("https://", "").replace("http://", "").split("/")[0].strip()
+    
     query = """
     query GetPost($slug: String!, $host: String!) {
       post(slug: $slug, host: $host) {
         id
+        slug
+        title
       }
     }
     """
     
-    # Extract host from publication_id or use a different approach
-    # For now, we'll try to get it from the domain in frontmatter
-    # This is a simplified version - you may need to adjust based on your setup
-    
-    return None  # Simplified - will create new post or update based on slug
+    try:
+        response = requests.post(
+            HASHNODE_API_URL,
+            json={"query": query, "variables": {"slug": slug, "host": host}},
+            headers=get_auth_headers(),
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if "errors" in data:
+                # Post doesn't exist or other error - that's okay, we'll create new
+                return None
+            
+            if "data" in data and data["data"] and data["data"].get("post"):
+                post = data["data"]["post"]
+                post_id = post.get("id")
+                if post_id:
+                    print(f"   📝 Found existing post with slug '{slug}' (ID: {post_id})")
+                    return post_id
+        
+        return None
+        
+    except requests.exceptions.RequestException as e:
+        print(f"   ⚠️  Error checking for existing post: {e}")
+        return None
 
 
 def publish_post(frontmatter: Dict, content: str, domain: str) -> bool:
     """
-    Publish a post to Hashnode using GraphQL API.
+    Publish or update a post to Hashnode using GraphQL API.
+    If a post with the same slug exists, it will be updated.
     """
     # Get publication ID
     publication_id = get_publication_id(domain)
@@ -226,6 +254,10 @@ def publish_post(frontmatter: Dict, content: str, domain: str) -> bool:
         print(f"Error: Missing required fields (title or slug)")
         return False
     
+    # Check if post already exists
+    existing_post_id = get_existing_post_id(slug, domain)
+    is_update = existing_post_id is not None
+    
     # Parse tags (can be comma-separated string or list)
     if isinstance(tags, str):
         tag_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
@@ -237,28 +269,57 @@ def publish_post(frontmatter: Dict, content: str, domain: str) -> bool:
     # Limit to 5 tags as per Hashnode requirements
     tag_list = tag_list[:5]
     
-    # Build mutation - using Hashnode's actual API structure
-    mutation = """
-    mutation PublishPost($input: PublishPostInput!) {
-      publishPost(input: $input) {
-        post {
-          id
-          slug
-          url
-          title
-          publishedAt
+    # Choose mutation based on whether post exists
+    if is_update:
+        # Use updatePost mutation for existing posts
+        mutation = """
+        mutation UpdatePost($input: UpdatePostInput!) {
+          updatePost(input: $input) {
+            post {
+              id
+              slug
+              url
+              title
+              updatedAt
+            }
+          }
         }
-      }
-    }
-    """
+        """
+        action = "updated"
+    else:
+        # Use publishPost mutation for new posts
+        mutation = """
+        mutation PublishPost($input: PublishPostInput!) {
+          publishPost(input: $input) {
+            post {
+              id
+              slug
+              url
+              title
+              publishedAt
+            }
+          }
+        }
+        """
+        action = "published"
     
     # Build input object according to Hashnode API
-    input_data = {
-        "publicationId": publication_id,
-        "title": title,
-        "slug": slug,
-        "contentMarkdown": content
-    }
+    if is_update:
+        # For updates, we need the post ID
+        input_data = {
+            "postId": existing_post_id,
+            "title": title,
+            "slug": slug,
+            "contentMarkdown": content
+        }
+    else:
+        # For new posts
+        input_data = {
+            "publicationId": publication_id,
+            "title": title,
+            "slug": slug,
+            "contentMarkdown": content
+        }
     
     # Add tags if provided
     if tag_list:
@@ -315,23 +376,41 @@ def publish_post(frontmatter: Dict, content: str, domain: str) -> bool:
         if response.status_code == 200:
             data = response.json()
             if "errors" in data:
-                print(f"GraphQL Errors: {json.dumps(data['errors'], indent=2)}")
-                return False
+                # If updatePost fails and post exists, try publishPost as fallback
+                # (publishPost should update existing posts with same slug)
+                if is_update:
+                    error_msg = json.dumps(data['errors'], indent=2)
+                    if "updatePost" in error_msg or "UpdatePost" in error_msg:
+                        print(f"   ⚠️  updatePost mutation failed, trying publishPost (which updates existing posts)...")
+                        # Fallback to publishPost - it should update if slug exists
+                        return _try_publish_post(input_data, publication_id, title, slug)
+                    else:
+                        print(f"GraphQL Errors: {error_msg}")
+                        return False
+                else:
+                    print(f"GraphQL Errors: {json.dumps(data['errors'], indent=2)}")
+                    return False
             
-            if "data" in data and data["data"] and data["data"].get("publishPost"):
-                publish_result = data["data"]["publishPost"]
-                post = publish_result.get("post")
+            # Handle response based on mutation type
+            if is_update:
+                result_key = "updatePost"
+            else:
+                result_key = "publishPost"
+            
+            if "data" in data and data["data"] and data["data"].get(result_key):
+                result = data["data"][result_key]
+                post = result.get("post")
                 
                 if post:
-                    print(f"✅ Successfully published: {post.get('title', title)}")
+                    print(f"✅ Successfully {action}: {post.get('title', title)}")
                     if post.get("url"):
                         print(f"   URL: {post['url']}")
                     elif post.get("slug"):
                         print(f"   Slug: {post['slug']}")
                     return True
                 else:
-                    print(f"❌ Publishing failed: No post returned in response")
-                    print(f"   Response: {json.dumps(publish_result, indent=2)}")
+                    print(f"❌ {action.capitalize()} failed: No post returned in response")
+                    print(f"   Response: {json.dumps(result, indent=2)}")
                     return False
         else:
             print(f"Error: HTTP {response.status_code}")
@@ -340,6 +419,70 @@ def publish_post(frontmatter: Dict, content: str, domain: str) -> bool:
             
     except requests.exceptions.RequestException as e:
         print(f"Error making API request: {e}")
+        return False
+
+
+def _try_publish_post(input_data: Dict, publication_id: str, title: str, slug: str) -> bool:
+    """
+    Fallback function to try publishPost mutation.
+    Hashnode's publishPost should update existing posts if slug matches.
+    """
+    # Convert updatePost input to publishPost input
+    publish_input = {
+        "publicationId": publication_id,
+        "title": input_data.get("title", title),
+        "slug": input_data.get("slug", slug),
+        "contentMarkdown": input_data.get("contentMarkdown", "")
+    }
+    
+    # Copy other fields
+    for key in ["tags", "subtitle", "coverImageURL", "hideFromHashnodeCommunity", 
+                "originalArticleURL", "seoTitle", "seoDescription", "disableComments",
+                "seriesSlug", "enableTableOfContents"]:
+        if key in input_data:
+            publish_input[key] = input_data[key]
+    
+    mutation = """
+    mutation PublishPost($input: PublishPostInput!) {
+      publishPost(input: $input) {
+        post {
+          id
+          slug
+          url
+          title
+          publishedAt
+        }
+      }
+    }
+    """
+    
+    try:
+        response = requests.post(
+            HASHNODE_API_URL,
+            json={"query": mutation, "variables": {"input": publish_input}},
+            headers=get_auth_headers(),
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if "errors" in data:
+                print(f"GraphQL Errors (fallback): {json.dumps(data['errors'], indent=2)}")
+                return False
+            
+            if "data" in data and data["data"] and data["data"].get("publishPost"):
+                result = data["data"]["publishPost"]
+                post = result.get("post")
+                
+                if post:
+                    print(f"✅ Successfully updated via publishPost: {post.get('title', title)}")
+                    if post.get("url"):
+                        print(f"   URL: {post['url']}")
+                    return True
+        
+        return False
+    except Exception as e:
+        print(f"Error in fallback publishPost: {e}")
         return False
 
 
