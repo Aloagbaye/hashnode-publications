@@ -194,6 +194,14 @@ def compute_tour_nearest_neighbor(self, coords):
     return tour
 ```
 
+### Visualizing TSP Instances
+
+Here's an example of what a TSP instance looks like with 20 cities:
+
+![TSP Instance Example](https://raw.githubusercontent.com/Aloagbaye/hashode-publications/main/tsp_images/tsp_instance.png)
+
+*Figure 1: A sample TSP instance with 20 cities. The goal is to find the shortest route visiting each city exactly once.*
+
 ---
 
 ## Building the GNN Model
@@ -333,6 +341,14 @@ def train_model(model, train_loader, val_loader, epochs=100, lr=0.001):
 3. **Learning Rate**: 0.001 works well for Adam
 4. **Batch Size**: Use 1 for simplicity (each graph is one batch)
 
+### Training Progress
+
+Here's what the training curves look like for our GNN model:
+
+![Training Curves](https://raw.githubusercontent.com/Aloagbaye/hashode-publications/main/tsp_images/tsp_training_curves.png)
+
+*Figure 2: Training and validation metrics over epochs. Notice how the model learns to predict edges in optimal tours with increasing accuracy.*
+
 ---
 
 ## Evaluating Results
@@ -372,6 +388,22 @@ With proper training, you should see:
 | Recall | 0.70-0.90 |
 | F1-Score | 0.70-0.85 |
 
+### Model Performance Analysis
+
+Let's examine the confusion matrix to understand how well our model performs:
+
+![Confusion Matrix](https://raw.githubusercontent.com/Aloagbaye/hashode-publications/main/tsp_images/tsp_confusion_matrix.png)
+
+*Figure 3: Confusion matrix showing the model's edge classification performance. The model correctly identifies most edges that belong (and don't belong) to optimal tours.*
+
+### Tour Quality Metrics
+
+The following visualization shows how our predicted tours compare to optimal solutions:
+
+![Tour Quality Analysis](https://raw.githubusercontent.com/Aloagbaye/hashode-publications/main/tsp_images/tsp_tour_quality.png)
+
+*Figure 4: Comparison of predicted tour lengths vs. optimal tour lengths. Our GNN model produces tours that are close to optimal solutions.*
+
 ### Visualizing Predictions
 
 ```python
@@ -398,6 +430,28 @@ def visualize_tour(coords, true_tour, pred_edges):
     plt.savefig('tsp_comparison.png', dpi=150)
     plt.show()
 ```
+
+Here's an example of our model's predictions on a sample TSP instance:
+
+![Sample TSP Predictions](https://raw.githubusercontent.com/Aloagbaye/hashode-publications/main/tsp_images/tsp_sample_predictions.png)
+
+*Figure 5: Side-by-side comparison of optimal tour (left) and predicted edges (right) for a 20-city TSP instance.*
+
+### Understanding Model Confidence
+
+The model also provides probability scores for each edge. Here's a visualization of the probability distribution:
+
+![Probability Analysis](https://raw.githubusercontent.com/Aloagbaye/hashode-publications/main/tsp_images/tsp_probability_analysis.png)
+
+*Figure 6: Probability heatmap showing which edges the model believes are most likely to be in the optimal tour. Darker colors indicate higher confidence.*
+
+### Predicted Tour Visualization
+
+Here's a complete predicted tour from our trained model:
+
+![Predicted Tour](https://raw.githubusercontent.com/Aloagbaye/hashode-publications/main/tsp_images/tsp_predicted_tour.png)
+
+*Figure 7: A complete tour constructed from the model's edge predictions. The tour visits all cities and returns to the starting point.*
 
 ---
 
