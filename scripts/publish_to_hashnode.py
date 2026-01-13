@@ -17,10 +17,24 @@ from typing import Dict, Optional, List, Tuple
 HASHNODE_API_URL = "https://gql.hashnode.com"
 
 # Get API key from environment
-HASHNODE_API_KEY = os.getenv("HASHNODE_ACCESS_TOKEN")
-if not HASHNODE_API_KEY:
+HASHNODE_ACCESS_TOKEN = os.getenv("HASHNODE_ACCESS_TOKEN")
+if not HASHNODE_ACCESS_TOKEN:
     print("Error: HASHNODE_ACCESS_TOKEN environment variable is not set")
     sys.exit(1)
+
+# Format authorization header
+# Hashnode API accepts the token directly (not with Bearer prefix)
+HASHNODE_API_KEY = HASHNODE_ACCESS_TOKEN.strip()
+
+
+def get_auth_headers() -> Dict[str, str]:
+    """
+    Get authorization headers for Hashnode API requests.
+    """
+    return {
+        "Authorization": HASHNODE_API_KEY,
+        "Content-Type": "application/json"
+    }
 
 
 def parse_frontmatter(content: str) -> Tuple[Optional[Dict], str]:
@@ -69,44 +83,108 @@ def get_user_info() -> Optional[Dict]:
     }
     """
     
-    response = requests.post(
-        HASHNODE_API_URL,
-        json={"query": query},
-        headers={
-            "Authorization": HASHNODE_API_KEY,
-            "Content-Type": "application/json"
-        }
-    )
-    
-    if response.status_code == 200:
-        data = response.json()
-        if "data" in data and data["data"] and data["data"].get("me"):
-            return data["data"]["me"]
-    
-    print(f"Error fetching user info: {response.text}")
-    return None
+    try:
+        response = requests.post(
+            HASHNODE_API_URL,
+            json={"query": query},
+            headers=get_auth_headers(),
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if "errors" in data:
+                print(f"GraphQL Errors in get_user_info: {json.dumps(data['errors'], indent=2)}")
+                return None
+            
+            if "data" in data and data["data"] and data["data"].get("me"):
+                return data["data"]["me"]
+        else:
+            print(f"Error fetching user info: HTTP {response.status_code}")
+            print(f"Response: {response.text}")
+            return None
+            
+    except requests.exceptions.RequestException as e:
+        print(f"Error making API request: {e}")
+        return None
 
 
 def get_publication_id(domain: str) -> Optional[str]:
     """
     Get publication ID from domain using Hashnode API.
+    Try two methods: from user's publications list, or direct publication query.
     """
-    user_info = get_user_info()
-    if not user_info:
-        return None
-    
     # Extract host from domain (remove https:// if present)
-    host = domain.replace("https://", "").replace("http://", "").split("/")[0]
+    host = domain.replace("https://", "").replace("http://", "").split("/")[0].strip()
     
-    # Find matching publication
-    publications = user_info.get("publications", {}).get("edges", [])
-    for pub_edge in publications:
-        pub = pub_edge.get("node", {})
-        pub_host = pub.get("domain", {}).get("host", "")
-        if pub_host == host:
-            return pub.get("id")
+    # Method 1: Get from user's publications list
+    user_info = get_user_info()
+    if user_info:
+        publications = user_info.get("publications", {}).get("edges", [])
+        print(f"Found {len(publications)} publication(s) for user")
+        
+        for pub_edge in publications:
+            pub = pub_edge.get("node", {})
+            pub_domain = pub.get("domain", {})
+            pub_host = pub_domain.get("host", "").strip()
+            
+            # Try exact match first
+            if pub_host.lower() == host.lower():
+                pub_id = pub.get("id")
+                print(f"✅ Found publication ID: {pub_id} for domain: {pub_host}")
+                return pub_id
+            
+            # Also try matching without .hashnode.dev suffix
+            if host.endswith(".hashnode.dev"):
+                host_without_suffix = host.replace(".hashnode.dev", "")
+                pub_host_without_suffix = pub_host.replace(".hashnode.dev", "")
+                if host_without_suffix.lower() == pub_host_without_suffix.lower():
+                    pub_id = pub.get("id")
+                    print(f"✅ Found publication ID: {pub_id} for domain: {pub_host}")
+                    return pub_id
+        
+        # Print available publications for debugging
+        print(f"Available publications:")
+        for pub_edge in publications:
+            pub = pub_edge.get("node", {})
+            pub_host = pub.get("domain", {}).get("host", "")
+            print(f"  - {pub_host}")
     
-    print(f"Error: Publication with domain '{host}' not found")
+    # Method 2: Try direct publication query
+    print(f"Trying direct publication query for host: {host}")
+    query = """
+    query GetPublication($host: String!) {
+      publication(host: $host) {
+        id
+        domain {
+          host
+        }
+      }
+    }
+    """
+    
+    try:
+        response = requests.post(
+            HASHNODE_API_URL,
+            json={"query": query, "variables": {"host": host}},
+            headers=get_auth_headers(),
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if "errors" in data:
+                print(f"GraphQL Errors in get_publication_id: {json.dumps(data['errors'], indent=2)}")
+            elif "data" in data and data["data"] and data["data"].get("publication"):
+                pub_id = data["data"]["publication"]["id"]
+                print(f"✅ Found publication ID via direct query: {pub_id}")
+                return pub_id
+    
+    except requests.exceptions.RequestException as e:
+        print(f"Error in direct publication query: {e}")
+    
+    print(f"❌ Error: Could not find publication with domain '{host}'")
+    print(f"   Searched for: {host}")
     return None
 
 
@@ -230,10 +308,7 @@ def publish_post(frontmatter: Dict, content: str, domain: str) -> bool:
         response = requests.post(
             HASHNODE_API_URL,
             json={"query": mutation, "variables": variables},
-            headers={
-                "Authorization": HASHNODE_API_KEY,
-                "Content-Type": "application/json"
-            },
+            headers=get_auth_headers(),
             timeout=30
         )
         
