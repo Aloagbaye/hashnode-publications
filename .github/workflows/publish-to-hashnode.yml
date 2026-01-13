@@ -1,0 +1,66 @@
+name: Publish to Hashnode
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - '*.md'
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history to detect changed files
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r scripts/requirements.txt
+
+      - name: Detect changed markdown files
+        id: changed-files
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            # On manual trigger, process all .md files except README.md
+            find . -maxdepth 1 -name "*.md" ! -name "README.md" -type f | sed 's|^\./||' > changed_files.txt
+          else
+            # On push, detect changed files
+            git diff --name-only --diff-filter=ACMR ${{ github.event.before }} ${{ github.sha }} | grep '\.md$' | grep -v '^README\.md$' > changed_files.txt || true
+          fi
+          
+          if [ -s changed_files.txt ]; then
+            echo "Found changed files:"
+            cat changed_files.txt
+          else
+            echo "No markdown files to process"
+            touch changed_files.txt
+          fi
+
+      - name: Publish to Hashnode
+        env:
+          HASHNODE_ACCESS_TOKEN: ${{ secrets.HASHNODE_ACCESS_TOKEN }}
+        run: |
+          python scripts/publish_to_hashnode.py
+        continue-on-error: true
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Publishing Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -f publish_results.txt ]; then
+            cat publish_results.txt >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No files were processed." >> $GITHUB_STEP_SUMMARY
+          fi
+
