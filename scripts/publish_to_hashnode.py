@@ -73,9 +73,7 @@ def get_user_info() -> Optional[Dict]:
           edges {
             node {
               id
-              domain {
-                host
-              }
+              url
             }
           }
         }
@@ -125,30 +123,34 @@ def get_publication_id(domain: str) -> Optional[str]:
         
         for pub_edge in publications:
             pub = pub_edge.get("node", {})
-            pub_domain = pub.get("domain", {})
-            pub_host = pub_domain.get("host", "").strip()
-            
-            # Try exact match first
-            if pub_host.lower() == host.lower():
-                pub_id = pub.get("id")
-                print(f"✅ Found publication ID: {pub_id} for domain: {pub_host}")
-                return pub_id
-            
-            # Also try matching without .hashnode.dev suffix
-            if host.endswith(".hashnode.dev"):
-                host_without_suffix = host.replace(".hashnode.dev", "")
-                pub_host_without_suffix = pub_host.replace(".hashnode.dev", "")
-                if host_without_suffix.lower() == pub_host_without_suffix.lower():
+            pub_url = pub.get("url", "")
+            # Extract host from URL (e.g., https://israelcodes.hashnode.dev -> israelcodes.hashnode.dev)
+            if pub_url:
+                pub_host = pub_url.replace("https://", "").replace("http://", "").split("/")[0].strip()
+                
+                # Try exact match first
+                if pub_host.lower() == host.lower():
                     pub_id = pub.get("id")
                     print(f"✅ Found publication ID: {pub_id} for domain: {pub_host}")
                     return pub_id
+                
+                # Also try matching without .hashnode.dev suffix
+                if host.endswith(".hashnode.dev"):
+                    host_without_suffix = host.replace(".hashnode.dev", "")
+                    pub_host_without_suffix = pub_host.replace(".hashnode.dev", "")
+                    if host_without_suffix.lower() == pub_host_without_suffix.lower():
+                        pub_id = pub.get("id")
+                        print(f"✅ Found publication ID: {pub_id} for domain: {pub_host}")
+                        return pub_id
         
         # Print available publications for debugging
         print(f"Available publications:")
         for pub_edge in publications:
             pub = pub_edge.get("node", {})
-            pub_host = pub.get("domain", {}).get("host", "")
-            print(f"  - {pub_host}")
+            pub_url = pub.get("url", "")
+            if pub_url:
+                pub_host = pub_url.replace("https://", "").replace("http://", "").split("/")[0]
+                print(f"  - {pub_host} (ID: {pub.get('id')})")
     
     # Method 2: Try direct publication query
     print(f"Trying direct publication query for host: {host}")
@@ -156,9 +158,7 @@ def get_publication_id(domain: str) -> Optional[str]:
     query GetPublication($host: String!) {
       publication(host: $host) {
         id
-        domain {
-          host
-        }
+        url
       }
     }
     """
@@ -377,9 +377,15 @@ def process_markdown_file(file_path: Path) -> bool:
         return False
     
     # Get domain (required)
-    domain = frontmatter.get("domain", "").strip()
-    if not domain:
+    domain_value = frontmatter.get("domain")
+    if domain_value is None:
         print("   ⚠️  No domain specified in frontmatter, skipping")
+        return False
+    
+    # Handle both string and None cases
+    domain = str(domain_value).strip() if domain_value else ""
+    if not domain:
+        print("   ⚠️  Domain is empty in frontmatter, skipping")
         return False
     
     # Publish post

@@ -30,7 +30,6 @@ In this comprehensive tutorial, you'll learn how to apply **Graph Neural Network
 ## What is the Traveling Salesman Problem?
 
 The **Traveling Salesman Problem (TSP)** is a classic optimization problem that asks:
-
 > *"Given a list of cities and the distances between them, what is the shortest possible route that visits each city exactly once and returns to the starting city?"*
 
 ### Why TSP Matters
