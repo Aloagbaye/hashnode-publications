@@ -45,7 +45,6 @@ TSP isn't just an academic puzzle — it has real-world applications in:
 Here's the catch: TSP is **NP-hard**. For just 20 cities, there are over **60 quadrillion** possible routes! Traditional algorithms struggle as the problem size grows, making machine learning approaches increasingly attractive.
 
 ---
-
 ## Why Use Graph Neural Networks for TSP?
 
 Graph Neural Networks are a natural fit for TSP because:

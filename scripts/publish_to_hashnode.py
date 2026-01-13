@@ -273,11 +273,12 @@ def publish_post(frontmatter: Dict, content: str, domain: str) -> bool:
     elif "cover_image" in frontmatter and frontmatter["cover_image"]:
         input_data["coverImageURL"] = str(frontmatter["cover_image"]).strip()
     
-    # Handle publish status
+    # Note: publishPost mutation publishes posts by default
+    # To save as draft, we would need to use a different mutation (not implemented yet)
+    # For now, if saveAsDraft is true, we'll skip publishing and log a message
     if frontmatter.get("saveAsDraft", False):
-        input_data["publishStatus"] = "DRAFT"
-    else:
-        input_data["publishStatus"] = "PUBLISHED"
+        print("   ⚠️  saveAsDraft is set to true, but draft publishing is not yet supported via API")
+        print("   ⚠️  Post will be published. To save as draft, use Hashnode's web interface.")
     
     if frontmatter.get("hideFromHashnodeCommunity", False):
         input_data["hideFromHashnodeCommunity"] = True
