@@ -459,7 +459,7 @@ Here's a complete predicted tour from our trained model:
 
 You can find the complete implementation on GitHub:
 
-🔗 **[Graph Neural Networks Tutorial Repository](https://github.com/yourusername/graph-neural-networks)**
+🔗 **[Graph Neural Networks Tutorial Repository](https://github.com/Aloagbaye/graph-neural-networks)**
 
 The repository includes:
 - ✅ Complete TSP implementation
@@ -519,17 +519,13 @@ In this tutorial, you learned how to:
 
 **Did you find this tutorial helpful?** Drop a comment below or share it with fellow ML enthusiasts! 
 
-**Have questions?** Feel free to reach out on [Twitter](https://twitter.com/yourhandle) or leave a comment.
-
----
-
-*Cover Photo by [Unsplash](https://unsplash.com)*
+**Have questions?** Feel free to leave a comment.
 
 ---
 
 ## About the Author
 
-[Your Name] is a machine learning enthusiast passionate about graph neural networks and optimization problems. When not coding, you can find them exploring new hiking trails or reading about the latest AI research.
+Hi, I'm Israel, a data scientist and AI engineer passionate about transforming real-world challenges into innovative solutions with machine learning and data. I love mentoring and supporting others as they grow in their tech careers. When I'm not coding or coaching, you'll likely find me immersed in a game of chess or enjoying a good action movie with my family. I hope you enjoyed this blog post and learnt something.
 
-**Follow for more ML tutorials:** [Hashnode](https://hashnode.com/@yourhandle) | [GitHub](https://github.com/yourhandle) | [Twitter](https://twitter.com/yourhandle)
+**Follow for more ML tutorials:** [Hashnode](https://hashnode.com/@israelcodes) | [GitHub](https://github.com/Aloagbaye) | [LinkedIn](https://linkedin.com/in/Aloagbaye)
 
