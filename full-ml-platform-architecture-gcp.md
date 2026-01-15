@@ -3,7 +3,7 @@ title: "Building a Full ML Platform on GCP: The Complete Reference Architecture"
 subtitle: "The definitive guide to designing and automating a production-grade ML platform on Google Cloud"
 slug: building-full-ml-platform-on-gcp
 cover_image: 
-tags: machine-learning, Terraform, google-cloud, vertex-AI, Pub/Sub
+tags: machine-learning, terraform, google-cloud, vertex-ai, pub-sub
 domain: israelcodes.hashnode.dev
 ---
 

@@ -188,6 +188,40 @@ def get_publication_id(domain: str) -> Optional[str]:
     return None
 
 
+def normalize_tag_slug(tag: str) -> str:
+    """
+    Normalize a tag to a valid Hashnode tag slug.
+    Hashnode requires: ^[a-z0-9-]{1,250}(?<!--deleted)$
+    - Only lowercase letters, numbers, and hyphens
+    - No spaces, uppercase, or special characters
+    - 1-250 characters
+    """
+    # Convert to lowercase
+    slug = tag.lower().strip()
+    
+    # Replace invalid characters with hyphens
+    # Replace spaces, slashes, and other special chars with hyphens
+    slug = re.sub(r'[^a-z0-9-]', '-', slug)
+    
+    # Remove multiple consecutive hyphens
+    slug = re.sub(r'-+', '-', slug)
+    
+    # Remove leading/trailing hyphens
+    slug = slug.strip('-')
+    
+    # Ensure it's not empty and not too long
+    if not slug:
+        slug = "tag"  # Fallback if tag becomes empty
+    
+    # Truncate to 250 characters (Hashnode limit)
+    slug = slug[:250]
+    
+    # Remove trailing hyphen if truncation added one
+    slug = slug.rstrip('-')
+    
+    return slug
+
+
 def get_existing_post_id(slug: str, domain: str) -> Optional[str]:
     """
     Check if a post with the given slug already exists.
@@ -326,9 +360,15 @@ def publish_post(frontmatter: Dict, content: str, domain: str) -> bool:
             "contentMarkdown": content
         }
     
-    # Add tags if provided
+    # Add tags if provided - normalize slugs to match Hashnode requirements
     if tag_list:
-        input_data["tags"] = [{"slug": tag, "name": tag} for tag in tag_list]
+        input_data["tags"] = [
+            {
+                "slug": normalize_tag_slug(tag),  # Normalized slug (lowercase, hyphens only)
+                "name": tag.strip()  # Original tag name for display
+            }
+            for tag in tag_list
+        ]
     
     # Add optional fields
     if "subtitle" in frontmatter and frontmatter["subtitle"]:
